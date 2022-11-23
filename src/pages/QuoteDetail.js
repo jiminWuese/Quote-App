@@ -1,34 +1,51 @@
 
-import { Fragment } from 'react';
-import { useParams, Route } from 'react-router-dom'
+import { Fragment, useEffect } from 'react';
+import { useParams, Route, Link, useRouteMatch } from 'react-router-dom'
 import HighlightedQuote from '../components/quotes/HighlightedQuote';
+import LoadingSpinner from '../components/UI/LoadingSpinner'; 
+import useHttp from '../hooks/use-http';
+import { getSingleQuote } from '../lib/api';
 
-import Comments from '../components/comments/Comments';
-
-const DUMMY_QUOTES = [{
-  id: 'q1', author: 'Jimin Wuese', text: 'To secret of winning  is starting and never stoping'
-},
-{
-  id: 'q2', author: 'Jimin Wuese', text: 'Keep upgrading yourself, keep changing, for the derivative of a constant is equal to zero'
-}
-]
-
+import Comments from '../components/comments/Comments'; 
 
 
 const QuoteDetail = () => {
-  
-  const params = useParams();
-  const quote = DUMMY_QUOTES.find(quote => quote.id === params.quoteId);
+  const match = useRouteMatch(); 
+  const params = useParams(); 
 
-  if(!quote){
-    return (<p>No quote found</p>)
-  }
+  const { quoteId } = params
+  const { sendRequest, status, data: loadedQuote, error } = useHttp(getSingleQuote, true)
+
+  useEffect(() => {
+    sendRequest(quoteId)
+  }, [sendRequest, quoteId])
+
+  if(status === 'pending'){
+    return (
+        <div className='centered'>
+            <LoadingSpinner />
+        </div>
+    )
+}
+
+if(error){
+    <p className='centered focused'>{error}</p>
+}
+
+if(!loadedQuote.text){
+    return <p className='centered focused'>No quote found</p>
+} 
 
 
   return (
   <Fragment>
-    <HighlightedQuote text={quote.text} author={quote.author} />
-    <Route path={`/quotes/${params.quoteId}/comments`}>
+    <HighlightedQuote text={loadedQuote.text} author={loadedQuote.author} />
+    <Route path={match.path} exact>
+    <div className='centered'>
+      <Link className='btn--flat' to={`${match.url}/comments`}>Load Comments</Link>
+    </div>
+    </Route>
+    <Route path={`${match.path}/comments`}>
         <Comments />
     </Route>
   </Fragment>)
